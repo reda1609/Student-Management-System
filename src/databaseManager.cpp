@@ -3,6 +3,7 @@
 #include <jdbc/mysql_driver.h>
 #include <jdbc/cppconn/connection.h>
 #include <jdbc/cppconn/statement.h>
+#include <jdbc/cppconn/prepared_statement.h>
 #include <jdbc/cppconn/resultset.h>
 #include <jdbc/cppconn/exception.h>
 
@@ -26,45 +27,58 @@ void DatabaseManager::connect()
 
 void DatabaseManager::insertStudent(Student* s)
 {
-    std::unique_ptr<sql::Statement> stmt(con->createStatement());
-    
-    stmt->execute(
-        "INSERT INTO student VALUES (" + 
-        std::to_string(s->getID()) + ", '" + 
-        s->getName() + "', " + 
-        std::to_string(s->getAge()) + ", '" + 
-        s->getDept() + "', " + 
-        std::to_string(s->getGPA()) + ")"
+    std::unique_ptr<sql::PreparedStatement> pstmt(
+        con->prepareStatement("INSERT INTO student VALUES (?, ?, ?, ?, ?)")
     );
+    
+    pstmt->setInt(1, s->getID());
+    pstmt->setString(2, s->getName());
+    pstmt->setInt(3, s->getAge());
+    pstmt->setString(4, s->getDept());
+    pstmt->setDouble(5, s->getGPA());
+    pstmt->execute();
+    
     cout << "Student inserted successfully." << std::endl;
 }
 
 void DatabaseManager::deleteStudent(int id)
 {
-    std::unique_ptr<sql::Statement> stmt(con->createStatement());
-    stmt->execute("DELETE FROM student WHERE id = " + to_string(id));
+    std::unique_ptr<sql::PreparedStatement> pstmt(
+        con->prepareStatement("DELETE FROM student WHERE id = ?")
+    );
+    
+    pstmt->setInt(1, id);
+    pstmt->execute();
+    
     cout << "Student with ID " << id << " deleted." << std::endl;
 }
 
 void DatabaseManager::updateStudent(Student* s)
 {
-    std::unique_ptr<sql::Statement> stmt(con->createStatement());
-    stmt->execute(
-        "UPDATE student SET full_name = '" + s->getName() + 
-        "', age = " + std::to_string(s->getAge()) + 
-        ", dept = '" + s->getDept() + 
-        "', gpa = " + std::to_string(s->getGPA()) + 
-        " WHERE id = " + std::to_string(s->getID())
+    std::unique_ptr<sql::PreparedStatement> pstmt(
+        con->prepareStatement(
+            "UPDATE student SET full_name = ?, age = ?, dept = ?, gpa = ? WHERE id = ?"
+        )
     );
+    
+    pstmt->setString(1, s->getName());
+    pstmt->setInt(2, s->getAge());
+    pstmt->setString(3, s->getDept());
+    pstmt->setDouble(4, s->getGPA());
+    pstmt->setInt(5, s->getID());
+    pstmt->execute();
+    
     cout << "Student with ID " << s->getID() << " updated." << std::endl;
 }
 
 void DatabaseManager::getStudent(int id)
 {
-    std::unique_ptr<sql::Statement> stmt(con->createStatement());
-    std::unique_ptr<sql::ResultSet> res(
-        stmt->executeQuery("SELECT * FROM student WHERE id = " + to_string(id))
+    std::unique_ptr<sql::PreparedStatement> pstmt(
+        con->prepareStatement("SELECT * FROM student WHERE id = ?")
     );
+    
+    pstmt->setInt(1, id);
+    std::unique_ptr<sql::ResultSet> res(pstmt->executeQuery());
 
     if (res->next()) 
     {
